@@ -31,7 +31,7 @@ The backend waits for a MongoDB connection before starting. You should see **Bac
 ## Planned milestones
 
 1. Project scaffolding and Git/GitHub setup (this phase)
-2. Secure admin/cashier authentication
+2. Secure admin/cashier authentication (login and role checking implemented)
 3. Products, categories, suppliers and inventory movements
 4. POS cart, atomic checkout, receipts and stock deduction
 5. Sales reports, search and alerts
@@ -55,3 +55,12 @@ For future changes: `git status`, `git add .`, `git commit -m "describe change"`
 
 - Never commit `.env`, passwords or real customer information.
 - POS checkout must use validated totals, authorization and a MongoDB transaction so stock and sale records stay consistent. Not implemented in Phase 1.
+
+## Phase 2: Authentication setup
+
+1. Set `JWT_SECRET` in `server/.env` to a random 32+ character value, replacing the placeholder.
+2. From the project root, run `npm install --prefix server` to install the login rate limiter.
+3. Run `npm run create:admin --prefix server` to create the first admin account. Enter your name, email and a unique password of at least 12 characters. The password is visible while entering, so keep the terminal private and clear its history afterward.
+4. Run `npm run dev` and sign in at http://localhost:5173.
+
+There is no public registration. Admin and cashier roles are validated by the backend. Creating additional cashier accounts is a subsequent feature. JWT expires after eight hours and is kept in sessionStorage; production deployment should consider HttpOnly cookies with appropriate CSRF protections.
