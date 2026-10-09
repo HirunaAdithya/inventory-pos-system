@@ -11,7 +11,7 @@ const safeUser = (user) => ({ id: user.id, name: user.name, email: user.email, r
 router.post('/login', rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: 'draft-7', legacyHeaders: false }), async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    if (typeof email !== 'string' || typeof password !== 'string' || email.length > 254 || password.length > 256) {
+    if (typeof email !== 'string' || typeof password !== 'string' || email.length > 254 || Buffer.byteLength(password, 'utf8') > 72) {
       return res.status(400).json({ message: 'Valid email and password are required' });
     }
     const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+passwordHash');

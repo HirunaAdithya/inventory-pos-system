@@ -6,6 +6,7 @@ const productSchema = new mongoose.Schema({
   category: { type: String, required: true, trim: true, maxlength: 60 },
   supplierName: { type: String, trim: true, maxlength: 100, default: '' },
   costCents: { type: Number, min: 0, default: 0 },
+  taxMode: { type: String, enum: ['standard', 'zero', 'exempt'], default: 'zero' },
   priceCents: { type: Number, required: true, min: 0 },
   quantity: { type: Number, required: true, min: 0 },
   lowStockAt: { type: Number, required: true, min: 0, default: 5 },

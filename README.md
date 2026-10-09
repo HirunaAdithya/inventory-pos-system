@@ -33,9 +33,10 @@ The backend waits for a MongoDB connection before starting. You should see **Bac
 1. Project scaffolding, MERN configuration and Git/GitHub workflow
 2. Admin/cashier authentication and cashier management
 3. Product catalog, categories, suppliers, low-stock alerts and stock movements
-4. POS cart, barcode/SKU input, cash checkout, receipt and atomic stock deduction
-5. Revenue/sales reports and summary dashboard
-6. Demo test plan and operational documentation (see `SETUP_FULL.md`)
+4. POS cart, barcode/SKU input, cash and demo-card checkout, configurable tax, receipt and atomic stock deduction
+5. Admin-only full/partial refunds, optional restocking, gross/net revenue reports and summary dashboard
+6. Basic security controls and audit history
+7. Demo test plan and operational documentation (see `SETUP_FULL.md`)
 
 ## GitHub setup
 

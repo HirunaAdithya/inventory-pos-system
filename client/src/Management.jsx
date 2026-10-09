@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './management.css';
 
-const tabs = [{ id:'categories', label:'Categories' },{ id:'suppliers', label:'Suppliers' },{ id:'stock', label:'Stock In / Out' },{ id:'users', label:'Cashier Accounts' }];
+const tabs = [{ id:'categories', label:'Categories' },{ id:'suppliers', label:'Suppliers' },{ id:'stock', label:'Stock In / Out' },{ id:'users', label:'Cashier Accounts' },{ id:'audit', label:'Audit Log' }];
 const initial = { name:'', phone:'', email:'', password:'', productId:'', change:'', note:'' };
 
 export default function Management({ token }) {
@@ -25,7 +25,7 @@ export default function Management({ token }) {
     try {
       const endpoint = target === 'stock' ? 'stock/movements' : target;
       const response = await request(endpoint);
-      setData(response.movements || response[target] || []);
+      setData(response.movements || response.logs || response[target] || []);
       if (target === 'stock') {
         const productResponse = await fetch('/api/products', { headers });
         const result = await productResponse.json();
@@ -57,7 +57,8 @@ export default function Management({ token }) {
   return <div className="managementPage">
     <div className="managementTabs">{tabs.map(t => <button key={t.id} className={tab === t.id ? 'selected' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}</div>
     {error && <div className="inventoryError" role="alert">{error}</div>}{notice && <p className="successNotice">{notice}</p>}
-    <div className="managementGrid"><section className="panel"><h2>{tab === 'stock' ? 'Adjust stock quantity' : tab === 'users' ? 'Create cashier account' : `Add ${tab === 'categories' ? 'category' : 'supplier'}`}</h2>
+    <div className="managementGrid"><section className="panel"><h2>{tab === 'audit' ? 'Audit history' : tab === 'stock' ? 'Adjust stock quantity' : tab === 'users' ? 'Create cashier account' : `Add ${tab === 'categories' ? 'category' : 'supplier'}`}</h2>
+      {tab === 'audit' ? <p className="muted">Recent sensitive actions: cashier creation/status changes, stock adjustments and refunds. Read-only records.</p> :
       <form className="managementForm" onSubmit={submit}>
         {tab === 'stock' ? <><label>Product<select required value={form.productId} onChange={e=>setForm({...form, productId:e.target.value})}><option value="">Select a product</option>{products.map(p=><option key={p.id} value={p.id}>{p.name} — current {p.quantity}</option>)}</select></label><label>Quantity change (+ stock in / − stock out)<input type="number" required step="1" value={form.change} onChange={e=>setForm({...form,change:e.target.value})} placeholder="e.g. 10 or -2"/></label><label>Reason / note<input value={form.note} maxLength={240} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Supplier delivery, damage…"/></label></> : <>
           <label>{tab === 'users' ? 'Cashier name' : 'Name'}<input required value={form.name} maxLength={100} onChange={e=>setForm({...form,name:e.target.value})}/></label>
@@ -66,11 +67,11 @@ export default function Management({ token }) {
           {tab === 'users' && <label>Initial password (12+ characters)<input type="password" required minLength={12} autoComplete="new-password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label>}
         </>}
         <button type="submit" className="primaryAction">{tab === 'stock' ? 'Save stock adjustment' : tab === 'users' ? 'Create cashier' : 'Add new'}</button>
-      </form>
-    </section><section className="panel"><h2>{tab === 'stock' ? 'Recent stock movements' : tab === 'users' ? 'User accounts' : `Existing ${tab}`}</h2>
+      </form>}
+    </section><section className="panel"><h2>{tab === 'audit' ? 'Recent audit events' : tab === 'stock' ? 'Recent stock movements' : tab === 'users' ? 'User accounts' : `Existing ${tab}`}</h2>
       {loading && <p>Loading…</p>}
       <div className="managementList">{data.map(d => <div className="managementItem" key={d._id}>
-        <div>{tab === 'stock' ? <><strong>{d.sku} · {d.change > 0 ? '+' : ''}{d.change} units</strong><small>{d.type} · After: {d.after} · {d.note || 'No note'} · {new Date(d.createdAt).toLocaleString()}</small></> : <><strong>{d.name}</strong><small>{tab === 'users' ? `${d.email} · ${d.role} · ${d.active ? 'Active' : 'Disabled'}` : tab === 'suppliers' ? `${d.phone || 'No phone'} · ${d.email || 'No email'}` : 'Product category'}</small></>}</div>
+        <div>{tab === 'audit' ? <><strong>{d.action}</strong><small>{d.actor?.name || 'Admin'} · {d.subjectId} · {d.note || ''} · {new Date(d.createdAt).toLocaleString()}</small></> : tab === 'stock' ? <><strong>{d.sku} · {d.change > 0 ? '+' : ''}{d.change} units</strong><small>{d.type} · After: {d.after} · {d.note || 'No note'} · {new Date(d.createdAt).toLocaleString()}</small></> : <><strong>{d.name}</strong><small>{tab === 'users' ? `${d.email} · ${d.role} · ${d.active ? 'Active' : 'Disabled'}` : tab === 'suppliers' ? `${d.phone || 'No phone'} · ${d.email || 'No email'}` : 'Product category'}</small></>}</div>
         {(tab === 'categories' || tab === 'suppliers') && <button onClick={()=>remove(tab,d._id)}>Delete</button>}
         {tab === 'users' && d.role === 'cashier' && <button onClick={()=>toggleUser(d)}>{d.active ? 'Disable' : 'Enable'}</button>}
       </div>)}{!loading && data.length === 0 && <p className="muted">No records yet.</p>}</div>

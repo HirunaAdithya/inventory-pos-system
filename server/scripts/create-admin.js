@@ -11,8 +11,8 @@ try {
   const name = (await io.question('Admin full name: ')).trim();
   const email = (await io.question('Admin email: ')).trim().toLowerCase();
   const password = await io.question('Admin password (12+ chars; visible while typing): ');
-  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12) {
-    throw Error('Enter a name, a valid email, and a password of at least 12 characters.');
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12 || Buffer.byteLength(password, 'utf8') > 72) {
+    throw Error('Enter a name, a valid email, and a password of 12–72 bytes.');
   }
   await mongoose.connect(process.env.MONGODB_URI);
   if (await User.exists({ email })) throw Error('A user with that email already exists.');

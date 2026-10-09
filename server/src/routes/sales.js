@@ -10,17 +10,19 @@ router.use(requireAuth);
 
 const present = sale => ({
   id: sale.id, createdAt: sale.createdAt, customerName: sale.customerName,
-  items: sale.items.map(p => ({ sku: p.sku, name: p.name, quantity: p.quantity, price: p.unitPriceCents / 100, total: p.lineTotalCents / 100 })),
+  paymentMethod: sale.paymentMethod || 'cash', demoPaymentReference: sale.demoPaymentReference || '',
+  items: sale.items.map(p => ({ sku: p.sku, name: p.name, quantity: p.quantity, price: p.unitPriceCents / 100, tax: (p.unitTaxCents || 0) * p.quantity / 100, total: p.lineTotalCents / 100 })),
+  subtotal: (sale.subtotalCents || sale.totalCents) / 100, tax: (sale.taxCents || 0) / 100,
   total: sale.totalCents / 100, paid: sale.paidCents / 100, change: sale.changeCents / 100
 });
 
 router.post('/checkout', async (req, res) => {
-  const { checkoutKey, items, customerName = '', paid } = req.body || {};
+  const { checkoutKey, items, customerName = '', paid, paymentMethod = 'cash' } = req.body || {};
   if (typeof checkoutKey !== 'string' || !/^[a-zA-Z0-9-]{20,80}$/.test(checkoutKey) ||
-      !Array.isArray(items) || items.length < 1 || items.length > 100 || typeof customerName !== 'string' || customerName.length > 100 ||
-      !Number.isFinite(Number(paid)) || Number(paid) < 0 ||
+      !['cash','card_demo'].includes(paymentMethod) || !Array.isArray(items) || items.length < 1 || items.length > 100 || typeof customerName !== 'string' || customerName.length > 100 ||
+      (paymentMethod === 'cash' && (!Number.isFinite(Number(paid)) || Number(paid) < 0 ||
       Math.abs(Number(paid) * 100 - Math.round(Number(paid) * 100)) > 0.000001 ||
-      !Number.isSafeInteger(Math.round(Number(paid) * 100))) {
+      !Number.isSafeInteger(Math.round(Number(paid) * 100))))) {
     return res.status(400).json({ message: 'Invalid checkout details' });
   }
   const ids = new Set();
@@ -30,7 +32,8 @@ router.post('/checkout', async (req, res) => {
     }
     ids.add(line.productId);
   }
-  const paidCents = Math.round(Number(paid) * 100);
+  const cashPaidCents = paymentMethod === 'cash' ? Math.round(Number(paid) * 100) : 0;
+  const vatRateBps = Number(process.env.VAT_RATE_BPS ?? 1800);
   const session = await mongoose.startSession();
   try {
     let completed;
@@ -40,6 +43,8 @@ router.post('/checkout', async (req, res) => {
       const lines = [];
       const movements = [];
       let totalCents = 0;
+      let subtotalCents = 0;
+      let taxCents = 0;
       for (const line of items) {
         // Conditional update makes overselling fail even when another checkout races us.
         const product = await Product.findOneAndUpdate(
@@ -48,14 +53,20 @@ router.post('/checkout', async (req, res) => {
           { new: false, session }
         );
         if (!product) { const e = Error('A product is missing or has insufficient stock. Refresh the cart.'); e.status = 409; throw e; }
-        const lineTotalCents = product.priceCents * line.quantity;
-        if (!Number.isSafeInteger(lineTotalCents)) { const e = Error('Cart total too large'); e.status = 400; throw e; }
+        const unitTaxCents = product.taxMode === 'standard' ? Math.round(product.priceCents * vatRateBps / 10000) : 0;
+        const lineSubtotalCents = product.priceCents * line.quantity;
+        const lineTaxCents = unitTaxCents * line.quantity;
+        const lineTotalCents = lineSubtotalCents + lineTaxCents;
+        if (!Number.isSafeInteger(lineTotalCents) || !Number.isSafeInteger(unitTaxCents)) { const e = Error('Cart total too large'); e.status = 400; throw e; }
+        subtotalCents += lineSubtotalCents;
+        taxCents += lineTaxCents;
         totalCents += lineTotalCents;
-        lines.push({ productId: product.id, sku: product.sku, name: product.name, quantity: line.quantity, unitPriceCents: product.priceCents, unitCostCents: product.costCents || 0, lineTotalCents });
+        lines.push({ productId: product.id, sku: product.sku, name: product.name, quantity: line.quantity, unitPriceCents: product.priceCents, unitTaxCents, taxMode: product.taxMode || 'zero', unitCostCents: product.costCents || 0, lineTotalCents });
         movements.push({ product: product.id, sku: product.sku, type: 'sale', change: -line.quantity, after: product.quantity - line.quantity, note: 'POS checkout', actor: req.user.id });
       }
-      if (!Number.isSafeInteger(totalCents) || paidCents < totalCents) { const e = Error('Cash received must cover the total amount'); e.status = 400; throw e; }
-      const [sale] = await Sale.create([{ checkoutKey, cashier: req.user.id, customerName: customerName.trim(), items: lines, totalCents, paidCents, changeCents: paidCents - totalCents }], { session });
+      if (!Number.isSafeInteger(totalCents) || !Number.isSafeInteger(subtotalCents) || !Number.isSafeInteger(taxCents) || (paymentMethod === 'cash' && cashPaidCents < totalCents)) { const e = Error('Cash received must cover the total amount'); e.status = 400; throw e; }
+      const paidCents = paymentMethod === 'card_demo' ? totalCents : cashPaidCents;
+      const [sale] = await Sale.create([{ checkoutKey, cashier: req.user.id, customerName: customerName.trim(), items: lines, subtotalCents, taxCents, totalCents, paidCents, changeCents: paidCents - totalCents, paymentMethod, demoPaymentReference: paymentMethod === 'card_demo' ? `DEMO-${checkoutKey.slice(0, 8).toUpperCase()}` : '' }], { session });
       await StockMovement.create(movements.map(m => ({ ...m, sale: sale.id })), { session });
       completed = sale;
     });

@@ -11,9 +11,11 @@ This is a functional general retail shop internship demonstration using MongoDB,
 | Inventory | Product create/edit/archive/search, SKU or barcode, category, supplier, selling/cost price, quantity, low-stock threshold |
 | Stock | Stock in/out adjustments, insufficient-stock checks, movement logs for adjustments and POS sales |
 | Management | Categories, suppliers, cashier accounts |
-| POS | Barcode/SKU search, cart, cash received, change, atomic sale and stock deduction |
+| POS | Barcode/SKU search, cart, cash and demo-card checkout, configurable tax, atomic sale and stock deduction |
 | Receipts | Browser-printable receipt after successful cash sale |
-| Reports | Sales history (last 100), revenue, transaction count, estimated gross profit |
+| Refunds | Admin-only partial/full returns, optional restocking, refund history and net revenue |
+| Reports | Sales history (last 100), gross/net revenue, refunds, transaction count, estimated gross profit |
+| Security | Helmet headers, login/API rate limiting, role checks, audit log |
 
 ## Requirements
 
@@ -27,7 +29,7 @@ This is a functional general retail shop internship demonstration using MongoDB,
 1. Extract the ZIP and open its `inventory-pos-system` folder in VS Code.
 2. From the project root run `npm.cmd run install:all`.
 3. Copy `server/.env.example` to `server/.env`.
-4. Set `MONGODB_URI` to your Atlas connection string and replace `JWT_SECRET` with a secure random 32+ character value. Generate using:
+4. Set `MONGODB_URI` to your Atlas connection string and replace `JWT_SECRET` with a secure random 32+ character value. `VAT_RATE_BPS=1800` represents a demo standard rate of 18%; set each product to Standard, Zero or Exempt. Tax is calculated on top of the selling price. Do not treat this as a legally approved tax configuration. Generate a JWT secret using:
 
    ```powershell
    node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
@@ -66,6 +68,8 @@ Suggested commit message: `feat: complete retail inventory and POS demo`.
 5. Settings → Stock In / Out should show a sale movement of `−2`.
 6. Reports should show the new transaction.
 7. Settings → Cashier Accounts: create a cashier. Sign out, then sign in as cashier; only Dashboard and Point of Sale should be visible.
+8. Create a **DEMO card** sale in POS; no card data or money is transferred.
+9. As Admin, go to Reports → Refund, select a quantity, and choose whether returned stock is reusable. Verify refund history and inventory.
 
 Use test items only, not real customer payments.
 
@@ -82,9 +86,16 @@ Enter the exact retail barcode digits in the product's `SKU / Barcode` field, e.
 - Archiving hides products rather than deleting their historical sales references.
 - Stock edits from older project versions may not have movement records.
 
+## Demo tax, payment and security notes
+
+- Cash refunds must be handed to the customer manually; this software only records them.
+- Demo card payments/refunds make no bank or payment-gateway API calls. Never enter real card numbers.
+- Tax is calculated from the configured demo rate and per-product treatment. This does **not** establish Sri Lankan VAT, SSCL or 2026 invoicing compliance.
+- Refunds/management are Admin-only; JWT login, rate limiting, audit logs and server-side totals are included. A live deployment still requires professional security, backups and compliance review.
+
 ## Limits — portfolio/demo, not a certified retail product
 
-No card payment gateway, refunds, VAT-compliant fiscal invoices, promotions, dedicated printer driver, offline transactions, multi-branch isolation, camera scanner, backup UI, password reset or deployment automation. Browser sessionStorage JWTs are a demo choice; production should assess hardened HttpOnly cookies, CSRF protection, security logging and monitoring. Estimated profit uses recorded cost price and excludes overhead. Confirm tax and legal requirements before live business use.
+No **real** card payment gateway or bank refunds, certified tax invoices, promotions, dedicated printer driver, offline transactions, multi-branch isolation, camera scanner, backup UI, password reset or deployment automation. Browser sessionStorage JWTs are a demo choice; production should assess hardened HttpOnly cookies, CSRF protection, security logging and monitoring. Estimated profit uses recorded cost price and excludes overhead and returned-cost adjustments. Confirm tax and legal requirements before live business use.
 
 ## Layout
 

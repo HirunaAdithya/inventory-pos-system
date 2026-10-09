@@ -7,6 +7,9 @@ const saleLine = new mongoose.Schema({
   quantity: { type: Number, required: true, min: 1 },
   unitPriceCents: { type: Number, required: true, min: 0 },
   unitCostCents: { type: Number, min: 0, default: 0 },
+  unitTaxCents: { type: Number, min: 0, default: 0 },
+  taxMode: { type: String, enum: ['standard','zero','exempt'], default: 'zero' },
+  refundedQuantity: { type: Number, min: 0, default: 0 },
   lineTotalCents: { type: Number, required: true, min: 0 }
 }, { _id: false });
 
@@ -15,10 +18,14 @@ const saleSchema = new mongoose.Schema({
   cashier: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   customerName: { type: String, trim: true, maxlength: 100, default: '' },
   items: { type: [saleLine], required: true },
+  subtotalCents: { type: Number, min: 0, default: 0 },
+  taxCents: { type: Number, min: 0, default: 0 },
   totalCents: { type: Number, required: true, min: 0 },
   paidCents: { type: Number, required: true, min: 0 },
   changeCents: { type: Number, required: true, min: 0 },
-  paymentMethod: { type: String, enum: ['cash'], default: 'cash' }
+  paymentMethod: { type: String, enum: ['cash','card_demo'], default: 'cash' },
+  demoPaymentReference: { type: String, default: '' },
+  refundedCents: { type: Number, min: 0, default: 0 }
 }, { timestamps: true });
 
 export default mongoose.model('Sale', saleSchema);

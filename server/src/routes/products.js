@@ -13,22 +13,23 @@ function validatedProduct(body) {
   const category = typeof body.category === 'string' ? body.category.trim() : '';
   const supplierName = typeof body.supplierName === 'string' ? body.supplierName.trim() : '';
   const cost = Number(body.cost || 0);
+  const taxMode = body.taxMode || 'zero';
   const price = Number(body.price);
   const quantity = Number(body.quantity);
   const lowStockAt = Number(body.lowStockAt);
   if (!name || name.length > 120 || !sku || sku.length > 40 || !/^[A-Z0-9_-]+$/.test(sku) || !category || category.length > 60 ||
-      supplierName.length > 100 || !Number.isFinite(cost) || cost < 0 || !Number.isSafeInteger(Math.round(cost * 100)) || Math.abs(cost * 100 - Math.round(cost * 100)) > 0.000001 ||
+      supplierName.length > 100 || !['standard','zero','exempt'].includes(taxMode) || !Number.isFinite(cost) || cost < 0 || !Number.isSafeInteger(Math.round(cost * 100)) || Math.abs(cost * 100 - Math.round(cost * 100)) > 0.000001 ||
       !Number.isFinite(price) || price < 0 || !Number.isInteger(Math.round(price * 100)) ||
       Math.abs(price * 100 - Math.round(price * 100)) > 0.000001 || !Number.isSafeInteger(Math.round(price * 100)) ||
       !Number.isSafeInteger(quantity) || quantity < 0 || !Number.isSafeInteger(lowStockAt) || lowStockAt < 0) {
     throw Error('Check name, SKU, category, price, stock quantity and alert level');
   }
-  return { name, sku, category, supplierName, costCents: Math.round(cost * 100), priceCents: Math.round(price * 100), quantity, lowStockAt };
+  return { name, sku, category, supplierName, taxMode, costCents: Math.round(cost * 100), priceCents: Math.round(price * 100), quantity, lowStockAt };
 }
 
 const format = item => ({
   id: item.id, name: item.name, sku: item.sku, category: item.category,
-  price: item.priceCents / 100, cost: (item.costCents || 0) / 100, supplierName: item.supplierName || '', quantity: item.quantity, lowStockAt: item.lowStockAt
+  price: item.priceCents / 100, cost: (item.costCents || 0) / 100, supplierName: item.supplierName || '', taxMode: item.taxMode || 'zero', quantity: item.quantity, lowStockAt: item.lowStockAt
 });
 
 router.get('/', async (req, res) => {
