@@ -32,7 +32,7 @@ The backend waits for a MongoDB connection before starting. You should see **Bac
 
 1. Project scaffolding and Git/GitHub setup (this phase)
 2. Secure admin/cashier authentication (login and role checking implemented)
-3. Products, categories, suppliers and inventory movements
+3. Product catalog and CRUD (implemented: add/edit/search/archive and low-stock indicators). Separate category/supplier modules and transaction history are not implemented yet.
 4. POS cart, atomic checkout, receipts and stock deduction
 5. Sales reports, search and alerts
 6. Testing, documentation and deployment
@@ -64,3 +64,11 @@ For future changes: `git status`, `git add .`, `git commit -m "describe change"`
 4. Run `npm run dev` and sign in at http://localhost:5173.
 
 There is no public registration. Admin and cashier roles are validated by the backend. Creating additional cashier accounts is a subsequent feature. JWT expires after eight hours and is kept in sessionStorage; production deployment should consider HttpOnly cookies with appropriate CSRF protections.
+
+## Phase 3: Inventory product catalog
+
+- Sign in as Admin and select **Inventory**. Add a product with unique SKU, name, category, price in LKR, stock quantity and low-stock threshold.
+- Edit or archive products using actions in each row. Archiving hides products, preserving their records for future sales references.
+- Search by product name, SKU or category. Each API action requires a valid session; changes require the Admin role.
+- Dashboard totals reflect the most recently loaded Inventory products and are not yet automatically refreshed on the dashboard.
+- Stock quantity is directly editable in this initial version. Dedicated stock-in/out records and atomic POS stock updates are planned.

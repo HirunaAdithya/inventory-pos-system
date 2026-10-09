@@ -3,11 +3,13 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import authRouter from './routes/auth.js';
+import productsRouter from './routes/products.js';
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json());
 app.use('/api/auth', authRouter);
+app.use('/api/products', productsRouter);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'inventory-pos-api' }));
 
