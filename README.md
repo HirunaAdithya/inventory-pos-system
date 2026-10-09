@@ -1,6 +1,6 @@
 # RetailFlow — Inventory Management + POS (MERN)
 
-General retail shop inventory and point-of-sale application. **Phase 1:** project setup and a connected frontend/backend health check. Inventory/POS features are planned and are **not yet implemented**.
+General retail shop inventory and point-of-sale demo application. **See [SETUP_FULL.md](SETUP_FULL.md) for the complete updated setup, features, test plan and limitations.**
 
 ## Requirements
 
@@ -28,14 +28,14 @@ npm run dev
 
 The backend waits for a MongoDB connection before starting. You should see **Backend API: online** on the dashboard once configured.
 
-## Planned milestones
+## Implemented modules
 
-1. Project scaffolding and Git/GitHub setup (this phase)
-2. Secure admin/cashier authentication (login and role checking implemented)
-3. Product catalog and CRUD (implemented: add/edit/search/archive and low-stock indicators). Separate category/supplier modules and transaction history are not implemented yet.
-4. POS cart, atomic checkout, receipts and stock deduction
-5. Sales reports, search and alerts
-6. Testing, documentation and deployment
+1. Project scaffolding, MERN configuration and Git/GitHub workflow
+2. Admin/cashier authentication and cashier management
+3. Product catalog, categories, suppliers, low-stock alerts and stock movements
+4. POS cart, barcode/SKU input, cash checkout, receipt and atomic stock deduction
+5. Revenue/sales reports and summary dashboard
+6. Demo test plan and operational documentation (see `SETUP_FULL.md`)
 
 ## GitHub setup
 
@@ -54,7 +54,7 @@ For future changes: `git status`, `git add .`, `git commit -m "describe change"`
 ## Safety notes
 
 - Never commit `.env`, passwords or real customer information.
-- POS checkout must use validated totals, authorization and a MongoDB transaction so stock and sale records stay consistent. Not implemented in Phase 1.
+- POS checkout validates totals, authorizes the user, and uses a MongoDB transaction so stock and sale records stay consistent.
 
 ## Phase 2: Authentication setup
 
@@ -63,12 +63,22 @@ For future changes: `git status`, `git add .`, `git commit -m "describe change"`
 3. Run `npm run create:admin --prefix server` to create the first admin account. Enter your name, email and a unique password of at least 12 characters. The password is visible while entering, so keep the terminal private and clear its history afterward.
 4. Run `npm run dev` and sign in at http://localhost:5173.
 
-There is no public registration. Admin and cashier roles are validated by the backend. Creating additional cashier accounts is a subsequent feature. JWT expires after eight hours and is kept in sessionStorage; production deployment should consider HttpOnly cookies with appropriate CSRF protections.
+There is no public registration. Admin and cashier roles are validated by the backend. Admin can create cashier accounts in Settings. JWT expires after eight hours and is kept in sessionStorage; production deployment should consider HttpOnly cookies with appropriate CSRF protections.
 
 ## Phase 3: Inventory product catalog
 
 - Sign in as Admin and select **Inventory**. Add a product with unique SKU, name, category, price in LKR, stock quantity and low-stock threshold.
 - Edit or archive products using actions in each row. Archiving hides products, preserving their records for future sales references.
 - Search by product name, SKU or category. Each API action requires a valid session; changes require the Admin role.
-- Dashboard totals reflect the most recently loaded Inventory products and are not yet automatically refreshed on the dashboard.
-- Stock quantity is directly editable in this initial version. Dedicated stock-in/out records and atomic POS stock updates are planned.
+- Dashboard fetches product/stock/revenue summary data. Stock changes and sales are written to movement history.
+- Product quantity can be edited; the edit creates an adjustment record. Settings also has a dedicated stock-in/out form.
+
+## Phase 4: Cash POS and barcode input
+
+1. Sign in as Admin or Cashier and open **Point of Sale**.
+2. Search by product name or SKU, or focus the input field and scan a barcode using a **USB/Bluetooth keyboard-wedge scanner configured to send Enter**. The stored product SKU must match the exact barcode value printed on the item. Camera scanning is **not** part of this phase.
+3. Add products to the cart, set quantities, optionally add customer name, and enter cash received.
+4. Press **Complete cash sale**. The server re-reads authoritative product prices, checks available stock, and uses a MongoDB transaction to create one sale record and decrement inventory together. An idempotency key helps prevent duplicate sale records when a request is retried.
+5. The receipt can be printed using the browser print dialog. Return to Inventory to confirm stock changed.
+
+**Important:** First test with a sample product (e.g. CC500) and a small transaction. The MongoDB Atlas cluster must support transactions (Atlas replica sets do). There is no card payment gateway, tax, discount, refund, printer driver, offline mode or camera-scanning feature yet. Receipts are browser print views, not tax-compliant invoices. Confirm legal/fiscal requirements before using with live customers.

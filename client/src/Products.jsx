@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Pencil, Archive, Package, AlertTriangle } from 'lucide-react';
 import './products.css';
 
-const blank = { name: '', sku: '', category: 'General', price: '', quantity: '0', lowStockAt: '5' };
+const blank = { name: '', sku: '', category: 'General', supplierName: '', cost: '0', price: '', quantity: '0', lowStockAt: '5' };
 const currency = value => `LKR ${Number(value).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function Products({ token, role, onChanged }) {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -28,10 +30,18 @@ export default function Products({ token, role, onChanged }) {
     finally { setLoading(false); }
   }, [headers, onChanged]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    Promise.all(['categories','suppliers'].map(async type => {
+      const response = await fetch(`/api/manage/${type}`, { headers });
+      if (!response.ok) return [];
+      const result = await response.json();
+      return result[type] || [];
+    })).then(([c,s]) => { setCategories(c); setSuppliers(s); }).catch(() => {});
+  }, [headers]);
 
   const filtered = products.filter(p => `${p.name} ${p.sku} ${p.category}`.toLowerCase().includes(search.toLowerCase()));
   const low = products.filter(p => p.quantity <= p.lowStockAt).length;
-  const edit = p => { setEditingId(p.id); setForm({ name: p.name, sku: p.sku, category: p.category, price: String(p.price), quantity: String(p.quantity), lowStockAt: String(p.lowStockAt) }); setError(''); };
+  const edit = p => { setEditingId(p.id); setForm({ name: p.name, sku: p.sku, category: p.category, supplierName: p.supplierName || '', cost: String(p.cost || 0), price: String(p.price), quantity: String(p.quantity), lowStockAt: String(p.lowStockAt) }); setError(''); };
   const add = () => { setEditingId(null); setForm({ ...blank }); setError(''); };
 
   async function submit(e) {
@@ -67,7 +77,9 @@ export default function Products({ token, role, onChanged }) {
       </tbody></table></div>
     </section>
     {form && <div className="modalShade"><div className="productModal" role="dialog" aria-modal="true" aria-label={editingId ? 'Edit product' : 'Add product'}><h2>{editingId ? 'Edit product' : 'Add new product'}</h2><p>Enter product details for your retail inventory.</p><form onSubmit={submit}>
-      {['name','sku','category','price','quantity','lowStockAt'].map(field => <label key={field}>{({ name:'Product name', sku:'SKU / Barcode', category:'Category', price:'Selling price (LKR)', quantity:'Stock quantity', lowStockAt:'Low stock alert at' })[field]}<input required value={form[field]} type={['price','quantity','lowStockAt'].includes(field) ? 'number' : 'text'} min={field === 'price' || field === 'quantity' || field === 'lowStockAt' ? '0' : undefined} step={field === 'price' ? '0.01' : field === 'quantity' || field === 'lowStockAt' ? '1' : undefined} maxLength={field === 'name' ? 120 : field === 'sku' ? 40 : field === 'category' ? 60 : undefined} onChange={e => setForm({ ...form, [field]: e.target.value })}/></label>)}
+      {['name','sku','category','supplierName','cost','price','quantity','lowStockAt'].map(field => <label key={field}>{({ name:'Product name', sku:'SKU / Barcode', category:'Category', supplierName:'Supplier name (optional)', cost:'Cost price (LKR)', price:'Selling price (LKR)', quantity:'Stock quantity', lowStockAt:'Low stock alert at' })[field]}<input required={!['supplierName'].includes(field)} list={field === 'category' ? 'category-options' : field === 'supplierName' ? 'supplier-options' : undefined} value={form[field]} type={['price','cost','quantity','lowStockAt'].includes(field) ? 'number' : 'text'} min={['price','cost','quantity','lowStockAt'].includes(field) ? '0' : undefined} step={field === 'price' || field === 'cost' ? '0.01' : ['quantity','lowStockAt'].includes(field) ? '1' : undefined} maxLength={field === 'name' ? 120 : field === 'sku' ? 40 : field === 'category' ? 60 : field === 'supplierName' ? 100 : undefined} onChange={e => setForm({ ...form, [field]: e.target.value })}/></label>)}
+      <datalist id="category-options">{categories.map(c=><option key={c._id} value={c.name}/>)}</datalist>
+      <datalist id="supplier-options">{suppliers.map(s=><option key={s._id} value={s.name}/>)}</datalist>
       <div className="modalButtons"><button type="button" onClick={() => { setForm(null); setError(''); }}>Cancel</button><button className="primaryAction" type="submit" disabled={saving}>{saving ? 'Saving…' : editingId ? 'Save changes' : 'Create product'}</button></div>
     </form></div></div>}
   </div>;
